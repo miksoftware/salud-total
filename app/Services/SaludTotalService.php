@@ -511,6 +511,12 @@ class SaludTotalService
                     $detailUrl = html_entity_decode($linkMatch[1], ENT_QUOTES, 'UTF-8');
                 }
 
+                // Extract the ContratoLaboral link from the "Estado Detallado" column
+                $contractUrl = null;
+                if (preg_match('/href="([^"]*ContratoLaboral[^"]*)"/', $rowHtml, $contractMatch)) {
+                    $contractUrl = html_entity_decode($contractMatch[1], ENT_QUOTES, 'UTF-8');
+                }
+
                 $member = [
                     'tipo_documento' => strip_tags(trim($cells[1][0] ?? '')),
                     'identificacion' => strip_tags(trim($cells[1][1] ?? '')),
@@ -520,6 +526,7 @@ class SaludTotalService
                     'estado_detallado' => strip_tags(trim($cells[1][5] ?? '')),
                     'documentos_faltantes' => strip_tags(trim($cells[1][6] ?? '')),
                     'detail_url' => $detailUrl,
+                    'contract_url' => $contractUrl,
                 ];
 
                 // Clean up whitespace
@@ -705,6 +712,124 @@ class SaludTotalService
     }
 
     /**
+     * Get the contract/labor detail page for a family member.
+     * URL: ContratoLaboral.aspx?q=...
+     */
+    public function getContractDetail(string $contractUrl): ?array
+    {
+        for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
+            try {
+                if (strpos($contractUrl, 'http') !== 0) {
+                    if (strpos($contractUrl, '/') === 0) {
+                        $contractUrl = 'https://transaccional.saludtotal.com.co' . $contractUrl;
+                    } else {
+                        $contractUrl = $this->baseUrl . '/Queries/' . ltrim($contractUrl, '/');
+                    }
+                }
+
+                Log::debug("SaludTotal: Fetching contract page", ['url' => $contractUrl]);
+
+                $response = $this->client()->get($contractUrl);
+                $body = $response->body();
+
+                $this->saveCookies();
+
+                if ($this->isSessionExpired($response, $body)) {
+                    if ($attempt < $this->maxRetries) {
+                        $this->refreshSession();
+                        usleep(2000000);
+                        continue;
+                    }
+                    return null;
+                }
+
+                if ($response->successful()) {
+                    // Save for debugging
+                    @file_put_contents(storage_path('logs/contract_response.html'), $body);
+
+                    $parsed = $this->parseContractPage($body);
+                    if (!empty($parsed)) {
+                        return $parsed;
+                    }
+                    Log::warning("SaludTotal: Contract page parsed but empty", [
+                        'url' => $contractUrl,
+                        'body_length' => strlen($body),
+                    ]);
+                }
+
+                if ($attempt < $this->maxRetries) {
+                    usleep(2000000);
+                    continue;
+                }
+                return null;
+            } catch (\Exception $e) {
+                Log::error("SaludTotal: Contract error (attempt $attempt)", [
+                    'url' => $contractUrl,
+                    'error' => $e->getMessage(),
+                ]);
+                if ($attempt < $this->maxRetries) {
+                    $this->refreshSession();
+                    usleep(2000000);
+                    continue;
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Parse the ContratoLaboral page HTML.
+     * The page has a simple table with label/value rows:
+     *   <tr><td>Identificación</td><td>N-830024478</td></tr>
+     *   <tr><td>Nombre</td><td>AVIZOR SEGURIDAD LTDA</td></tr>
+     *   etc.
+     */
+    public function parseContractPage(string $html): array
+    {
+        $data = [];
+
+        // Map label text → field key
+        $labelMappings = [
+            'Identificación' => 'contrato_empresa_id',
+            'Nombre' => 'contrato_empresa_nombre',
+            'ARP' => 'contrato_arp',
+            'AFP' => 'contrato_afp',
+            'Cargo' => 'contrato_cargo',
+            'Último Pago' => 'contrato_ultimo_pago',
+            'Ingreso Base' => 'contrato_ingreso_base',
+            'Cotización pagada' => 'contrato_cotizacion_pagada',
+            'No. periodos mora' => 'contrato_periodos_mora',
+            'Fecha de Primer Pago Exigido' => 'contrato_fecha_primer_pago',
+        ];
+
+        // Extract all table rows with two <td> cells
+        if (preg_match_all('#<tr[^>]*>\s*<td[^>]*>(.*?)</td>\s*<td[^>]*>(.*?)</td>\s*</tr>#si', $html, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $label = trim(strip_tags($match[1]));
+                $value = trim(strip_tags($match[2]));
+                $value = preg_replace('/\s+/', ' ', $value);
+
+                foreach ($labelMappings as $searchLabel => $fieldKey) {
+                    if (strcasecmp($label, $searchLabel) === 0 || str_contains($label, $searchLabel)) {
+                        if (!empty($value) && $value !== '&nbsp;' && $value !== "\xC2\xA0") {
+                            $data[$fieldKey] = $value;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        Log::debug('SaludTotal: Parsed contract page', [
+            'fields_found' => count($data),
+            'keys' => array_keys($data),
+        ]);
+
+        return $data;
+    }
+
+    /**
      * Process a single cedula: query family group + get details for matching member.
      */
     public function processCedula(string $cedula): array
@@ -797,6 +922,35 @@ class SaludTotalService
             $result['status'] = 'success';
             $result['error'] = 'Información parcial (sin detalle individual)';
             Log::info("SaludTotal: Processed $cedula with partial info (no detail page)");
+        }
+
+        // Step 3: Get contract/labor detail (ContratoLaboral.aspx)
+        if (!empty($targetMember['contract_url'])) {
+            usleep($this->delay * 1000);
+
+            Log::debug("SaludTotal: Fetching contract detail", ['url' => $targetMember['contract_url']]);
+            $contractData = $this->getContractDetail($targetMember['contract_url']);
+
+            if ($contractData && !empty($contractData)) {
+                $result['data'] = array_merge($result['data'], $contractData);
+                Log::info("SaludTotal: Contract data obtained for $cedula", ['fields' => count($contractData)]);
+            } else {
+                Log::info("SaludTotal: No contract data for $cedula (may not have active contract)");
+            }
+        } elseif (!empty($targetMember['detail_url'])) {
+            // Try constructing contract URL from detail URL (same q= parameter)
+            $contractUrl = str_replace('FGDetail.aspx', 'ContratoLaboral.aspx', $targetMember['detail_url']);
+            if ($contractUrl !== $targetMember['detail_url']) {
+                usleep($this->delay * 1000);
+
+                Log::debug("SaludTotal: Trying contract URL from detail URL", ['url' => $contractUrl]);
+                $contractData = $this->getContractDetail($contractUrl);
+
+                if ($contractData && !empty($contractData)) {
+                    $result['data'] = array_merge($result['data'], $contractData);
+                    Log::info("SaludTotal: Contract data obtained for $cedula (from detail URL)");
+                }
+            }
         }
 
         return $result;

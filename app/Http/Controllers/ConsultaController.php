@@ -174,6 +174,16 @@ class ConsultaController extends Controller
                 'ciudad' => $data['ciudad'] ?? null,
                 'ips_medica_asignada' => $data['ips_medica_asignada'] ?? null,
                 'ips_odontologica_asignada' => $data['ips_odontologica_asignada'] ?? null,
+                'contrato_empresa_id' => $data['contrato_empresa_id'] ?? null,
+                'contrato_empresa_nombre' => $data['contrato_empresa_nombre'] ?? null,
+                'contrato_arp' => $data['contrato_arp'] ?? null,
+                'contrato_afp' => $data['contrato_afp'] ?? null,
+                'contrato_cargo' => $data['contrato_cargo'] ?? null,
+                'contrato_ultimo_pago' => $data['contrato_ultimo_pago'] ?? null,
+                'contrato_ingreso_base' => $data['contrato_ingreso_base'] ?? null,
+                'contrato_cotizacion_pagada' => $data['contrato_cotizacion_pagada'] ?? null,
+                'contrato_periodos_mora' => $data['contrato_periodos_mora'] ?? null,
+                'contrato_fecha_primer_pago' => $data['contrato_fecha_primer_pago'] ?? null,
             ]);
         }
 

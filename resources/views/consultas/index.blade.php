@@ -89,6 +89,9 @@
                         <th>Edad</th><th>Sexo</th><th>Ciudad</th><th>Dirección</th>
                         <th>Teléfono</th><th>IPS Médica</th><th>IPS Odontológica</th>
                         <th>EPS Anterior</th><th>Antigüedad ST</th><th>Fecha Afiliación</th>
+                        <th>Empresa</th><th>ARP</th><th>AFP</th><th>Cargo</th>
+                        <th>Último Pago</th><th>Ingreso Base</th><th>Cotización</th>
+                        <th>Mora</th><th>1er Pago Exigido</th>
                     </tr>
                 </thead>
                 <tbody id="resultsBody"></tbody>
@@ -322,7 +325,12 @@
             <td>${data.direccion || ''}</td><td>${data.telefono || ''}</td>
             <td>${data.ips_medica_asignada || ''}</td><td>${data.ips_odontologica_asignada || ''}</td>
             <td>${data.eps_anterior || ''}</td><td>${data.antiguedad_salud_total || ''}</td>
-            <td>${data.fecha_afiliacion || ''}</td>`;
+            <td>${data.fecha_afiliacion || ''}</td>
+            <td>${data.contrato_empresa_nombre || ''}</td><td>${data.contrato_arp || ''}</td>
+            <td>${data.contrato_afp || ''}</td><td>${data.contrato_cargo || ''}</td>
+            <td>${data.contrato_ultimo_pago || ''}</td><td>${data.contrato_ingreso_base || ''}</td>
+            <td>${data.contrato_cotizacion_pagada || ''}</td><td>${data.contrato_periodos_mora || ''}</td>
+            <td>${data.contrato_fecha_primer_pago || ''}</td>`;
         row.style.animation = 'slideIn 0.3s ease';
         tbody.prepend(row);
     }

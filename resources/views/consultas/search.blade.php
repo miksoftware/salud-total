@@ -90,7 +90,10 @@
         html += '<th>Estado</th><th>Fecha Nac.</th><th>Edad</th><th>Sexo</th>';
         html += '<th>Ciudad</th><th>Dirección</th><th>Teléfono</th>';
         html += '<th>IPS Médica</th><th>IPS Odontológica</th><th>EPS Anterior</th>';
-        html += '<th>Antigüedad ST</th><th>Fecha Afiliación</th><th>Consultado</th>';
+        html += '<th>Antigüedad ST</th><th>Fecha Afiliación</th>';
+        html += '<th>Empresa</th><th>ARP</th><th>AFP</th><th>Cargo</th>';
+        html += '<th>Último Pago</th><th>Ingreso Base</th><th>Cotización</th>';
+        html += '<th>Mora</th><th>1er Pago Exigido</th><th>Consultado</th>';
         html += '</tr></thead><tbody>';
 
         results.forEach(r => {
@@ -111,6 +114,15 @@
                 <td>${r.eps_anterior || ''}</td>
                 <td>${r.antiguedad_salud_total || ''}</td>
                 <td>${r.fecha_afiliacion || ''}</td>
+                <td>${r.contrato_empresa_nombre || ''}</td>
+                <td>${r.contrato_arp || ''}</td>
+                <td>${r.contrato_afp || ''}</td>
+                <td>${r.contrato_cargo || ''}</td>
+                <td>${r.contrato_ultimo_pago || ''}</td>
+                <td>${r.contrato_ingreso_base || ''}</td>
+                <td>${r.contrato_cotizacion_pagada || ''}</td>
+                <td>${r.contrato_periodos_mora || ''}</td>
+                <td>${r.contrato_fecha_primer_pago || ''}</td>
                 <td>${r.created_at ? new Date(r.created_at).toLocaleDateString('es-CO') : ''}</td>
             </tr>`;
         });
