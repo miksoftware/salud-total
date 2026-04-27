@@ -9,18 +9,19 @@ use Illuminate\Http\JsonResponse;
 class ConsultaCedulaController extends Controller
 {
     /**
-     * Retorna la información más reciente de un afiliado por cédula.
+     * Retorna el historial completo de consultas de un afiliado por cédula,
+     * ordenado del más reciente al más antiguo.
      *
      * GET /api/consulta/cedula/{cedula}
      */
     public function show(string $cedula): JsonResponse
     {
-        $resultado = ConsultaResult::where('cedula', $cedula)
+        $resultados = ConsultaResult::where('cedula', $cedula)
             ->where('status', 'success')
             ->latest('updated_at')
-            ->first();
+            ->get();
 
-        if (! $resultado) {
+        if ($resultados->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No se encontraron resultados para la cédula proporcionada.',
@@ -28,30 +29,33 @@ class ConsultaCedulaController extends Controller
             ], 404);
         }
 
+        $data = $resultados->map(fn (ConsultaResult $r) => [
+            'cedula'                    => $r->cedula,
+            'tipo_documento'            => $r->tipo_documento,
+            'identificacion'            => $r->identificacion,
+            'nombres'                   => $r->nombres,
+            'parentesco'                => $r->parentesco,
+            'estado_detallado'          => $r->estado_detallado,
+            'fecha_nacimiento'          => $r->fecha_nacimiento,
+            'edad'                      => $r->edad,
+            'sexo'                      => $r->sexo,
+            'antiguedad_salud_total'    => $r->antiguedad_salud_total,
+            'fecha_afiliacion'          => $r->fecha_afiliacion,
+            'eps_anterior'              => $r->eps_anterior,
+            'direccion'                 => $r->direccion,
+            'telefono'                  => $r->telefono,
+            'ciudad'                    => $r->ciudad,
+            'ips_medica_asignada'       => $r->ips_medica_asignada,
+            'ips_odontologica_asignada' => $r->ips_odontologica_asignada,
+            'contrato_empresa_nombre'   => $r->contrato_empresa_nombre,
+            'consultado_en'             => $r->updated_at?->toIso8601String(),
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Consulta exitosa.',
-            'data'    => [
-                'cedula'                    => $resultado->cedula,
-                'tipo_documento'            => $resultado->tipo_documento,
-                'identificacion'            => $resultado->identificacion,
-                'nombres'                   => $resultado->nombres,
-                'parentesco'                => $resultado->parentesco,
-                'estado_detallado'          => $resultado->estado_detallado,
-                'fecha_nacimiento'          => $resultado->fecha_nacimiento,
-                'edad'                      => $resultado->edad,
-                'sexo'                      => $resultado->sexo,
-                'antiguedad_salud_total'    => $resultado->antiguedad_salud_total,
-                'fecha_afiliacion'          => $resultado->fecha_afiliacion,
-                'eps_anterior'              => $resultado->eps_anterior,
-                'direccion'                 => $resultado->direccion,
-                'telefono'                  => $resultado->telefono,
-                'ciudad'                    => $resultado->ciudad,
-                'ips_medica_asignada'       => $resultado->ips_medica_asignada,
-                'ips_odontologica_asignada' => $resultado->ips_odontologica_asignada,
-                'contrato_empresa_nombre'   => $resultado->contrato_empresa_nombre,
-                'consultado_en'             => $resultado->updated_at?->toIso8601String(),
-            ],
+            'total'   => $data->count(),
+            'data'    => $data,
         ]);
     }
 }
