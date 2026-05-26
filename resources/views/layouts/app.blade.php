@@ -346,6 +346,14 @@
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.consultas') }}" class="{{ request()->routeIs('admin.consultas') ? 'active' : '' }}">📁 Subir Archivo</a>
                     <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.index') ? 'active' : '' }}">👥 Usuarios</a>
+                    <a href="{{ route('salud_total.credentials') }}" class="{{ request()->routeIs('salud_total.*') ? 'active' : '' }}" style="display:inline-flex;align-items:center;gap:6px;">
+                        🔗 API
+                        @if(session()->has('salud_total_session_url'))
+                            <span style="width:8px;height:8px;border-radius:50%;background:#69f0ae;display:inline-block;" title="URL personalizada activa"></span>
+                        @else
+                            <span style="width:8px;height:8px;border-radius:50%;background:#9999bb;display:inline-block;" title="Usando URL por defecto"></span>
+                        @endif
+                    </a>
                 @endif
                 <a href="{{ route('consultas.search') }}" class="{{ request()->routeIs('consultas.search') ? 'active' : '' }}">🔍 Consultas</a>
                 <a href="{{ route('consultas.files') }}" class="{{ request()->routeIs('consultas.files') ? 'active' : '' }}">📊 Archivos</a>

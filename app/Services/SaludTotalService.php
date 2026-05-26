@@ -20,7 +20,7 @@ class SaludTotalService
     public function __construct()
     {
         $this->baseUrl = config('salud_total.base_url');
-        $this->sessionInitUrl = config('salud_total.session_init_url');
+        $this->sessionInitUrl = session('salud_total_session_url', config('salud_total.session_init_url'));
         $this->timeout = config('salud_total.timeout');
         $this->delay = config('salud_total.delay_between_requests');
         $this->cookieJar = new CookieJar();

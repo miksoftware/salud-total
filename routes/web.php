@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaController;
+use App\Http\Controllers\SaludTotalCredentialController;
 
 // --- Auth ---
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -37,6 +38,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
         Route::put('/usuarios/{id}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/usuarios/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // Configuración URL sesión
+        Route::get('/salud-total/config', [SaludTotalCredentialController::class, 'index'])->name('salud_total.credentials');
+        Route::post('/salud-total/config/save', [SaludTotalCredentialController::class, 'save'])->name('salud_total.credentials.save');
+        Route::post('/salud-total/config/test', [SaludTotalCredentialController::class, 'test'])->name('salud_total.credentials.test');
+        Route::post('/salud-total/config/reset', [SaludTotalCredentialController::class, 'reset'])->name('salud_total.credentials.reset');
     });
 
     // === CONSULTA routes (both roles) ===
