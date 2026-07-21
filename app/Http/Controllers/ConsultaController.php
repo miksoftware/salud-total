@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Consulta;
 use App\Models\ConsultaResult;
 use App\Services\SaludTotalService;
+use App\Services\SaludTotalCommerceService;
 use App\Imports\CedulasImport;
 use App\Exports\ResultsExport;
 use Illuminate\Http\Request;
@@ -13,6 +14,21 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ConsultaController extends Controller
 {
+    /**
+     * Return the correct scraping service based on the configured login method.
+     * Both services expose processCedula() and initSession()/login() with the same contract.
+     */
+    protected function resolveService(): SaludTotalService|SaludTotalCommerceService
+    {
+        $method = session('salud_total_login_method', config('salud_total.login_method', 'url'));
+
+        if ($method === 'commerce') {
+            return new SaludTotalCommerceService();
+        }
+
+        return new SaludTotalService();
+    }
+
     /**
      * Main view.
      */
@@ -140,8 +156,8 @@ class ConsultaController extends Controller
         // Mark as processing
         $consulta->update(['status' => 'processing']);
 
-        // Create service - it will auto-initialize the session
-        $service = new SaludTotalService();
+        // Create service – uses the configured login method automatically
+        $service = $this->resolveService();
 
         // Process the cedula (service handles session init + retries internally)
         $result = $service->processCedula($pendingResult->cedula);
@@ -252,7 +268,32 @@ class ConsultaController extends Controller
     public function testConnection(): JsonResponse
     {
         try {
-            $service = new SaludTotalService();
+            $service = $this->resolveService();
+            $method  = session('salud_total_login_method', config('salud_total.login_method', 'url'));
+
+            if ($method === 'commerce') {
+                /** @var SaludTotalCommerceService $service */
+                $success = $service->login();
+
+                if ($success) {
+                    // Quick smoke-test: navigate to GrupoFamiliar
+                    $html = $service->navigateToFamilyGroupPage();
+                    if ($html && str_contains($html, 'txtIdentification')) {
+                        return response()->json([
+                            'success' => true,
+                            'message' => '✅ Conexión exitosa (Commerce). Portal responde correctamente.',
+                        ]);
+                    }
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => '❌ No se pudo conectar al portal Commerce. Verifique las credenciales.',
+                ]);
+            }
+
+            // Legacy URL method
+            /** @var SaludTotalService $service */
             $success = $service->initSession();
 
             if ($success) {

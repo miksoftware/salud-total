@@ -39,11 +39,19 @@ Route::middleware('auth')->group(function () {
         Route::put('/usuarios/{id}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/usuarios/{id}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // Configuración URL sesión
+        // Configuración credenciales Salud Total
         Route::get('/salud-total/config', [SaludTotalCredentialController::class, 'index'])->name('salud_total.credentials');
+
+        // Método URL (legado)
         Route::post('/salud-total/config/save', [SaludTotalCredentialController::class, 'save'])->name('salud_total.credentials.save');
         Route::post('/salud-total/config/test', [SaludTotalCredentialController::class, 'test'])->name('salud_total.credentials.test');
         Route::post('/salud-total/config/reset', [SaludTotalCredentialController::class, 'reset'])->name('salud_total.credentials.reset');
+
+        // Método Commerce (usuario + contraseña)
+        Route::post('/salud-total/config/save-commerce', [SaludTotalCredentialController::class, 'saveCommerce'])->name('salud_total.credentials.save_commerce');
+        Route::post('/salud-total/config/test-commerce', [SaludTotalCredentialController::class, 'testCommerce'])->name('salud_total.credentials.test_commerce');
+        Route::post('/salud-total/config/reset-commerce', [SaludTotalCredentialController::class, 'resetCommerce'])->name('salud_total.credentials.reset_commerce');
+        Route::post('/salud-total/config/set-method', [SaludTotalCredentialController::class, 'setMethod'])->name('salud_total.credentials.set_method');
     });
 
     // === CONSULTA routes (both roles) ===
